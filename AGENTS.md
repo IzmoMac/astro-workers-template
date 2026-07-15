@@ -130,9 +130,11 @@ interactivity Astro can't express declaratively.
 
 ## Open questions to confirm before big changes
 
-- New Worker bindings (D1, KV, R2, Durable Objects) — confirm naming
-  convention before adding, so `wrangler.jsonc` stays consistent across
-  services.
+- New Worker bindings (D1, KV, R2, Durable Objects) — the *mechanism* is
+  settled (Terraform resource in `/infra` + CI wires the generated ID into
+  `wrangler.jsonc`, see "Cloudflare Workers / Wrangler" above), but still
+  confirm the binding *name* before adding, so `wrangler.jsonc` stays
+  consistent across services.
 - New shared UI components — confirm whether they belong in a
   `packages/ui` workspace package or stay local to one app.
 

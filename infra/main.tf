@@ -1,6 +1,17 @@
-# Empty on purpose — this is a skeleton, not a working Access setup yet.
+# Empty on purpose — this is a skeleton, not working resources yet.
 #
-# Add Cloudflare Zero Trust Access apps/policies here, e.g.:
+# Add Cloudflare resources here as the project needs them, e.g. a D1
+# database or Zero Trust Access apps/policies:
+#
+# resource "cloudflare_d1_database" "example" {
+#   account_id = var.cloudflare_account_id
+#   name       = "example"
+# }
+#
+# If a resource's generated ID needs to land in wrangler.jsonc (like a D1
+# database_id), add a matching output in outputs.tf — see the commented
+# example there and README.md "Wiring a Terraform-provisioned ID into
+# wrangler.jsonc".
 #
 # resource "cloudflare_zero_trust_access_application" "example" {
 #   account_id = var.cloudflare_account_id
