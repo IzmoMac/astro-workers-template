@@ -6,6 +6,15 @@
 # resource "cloudflare_d1_database" "example" {
 #   account_id = var.cloudflare_account_id
 #   name       = "example"
+#
+#   # Cloudflare's API always returns this as an object (never null) once
+#   # the database exists. Left undeclared, Terraform's plan tries to
+#   # "correct" it to null on every apply, and the API rejects that PUT
+#   # with 400 Invalid property: read_replication => Expected object,
+#   # received null. Pin it to the API's own default so there's no drift.
+#   read_replication = {
+#     mode = "disabled"
+#   }
 # }
 #
 # If a resource's generated ID needs to land in wrangler.jsonc (like a D1
