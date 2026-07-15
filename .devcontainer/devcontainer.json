@@ -7,13 +7,13 @@
   "features": {
     // Claude Code CLI, auto-updating. Pin a version instead if you want
     // reproducible builds (see comment in postCreateCommand).
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
 
     // gh CLI — handy for PRs / repo setup from inside the container
-    "ghcr.io/devcontainers/features/github-cli:1.1.0": {}
-  
+    "ghcr.io/devcontainers/features/github-cli:1.1.0": {},
+
     // For the Cloudflare Access / Terraform pieces
-    "ghcr.io/devcontainers/features/terraform:1.4.4": {}
+    "ghcr.io/devcontainers/features/terraform:1.4.4": {},
 
     // ripgrep, fzf, zsh niceties etc.
     "ghcr.io/devcontainers/features/common-utils:2.5.9": {
@@ -32,7 +32,8 @@
   "containerEnv": {
     // Stops Claude Code auto-update inside the container if you want pinned versions;
     // remove this line if you're fine with auto-update.
-    "DISABLE_AUTOUPDATER": "0"
+    "DISABLE_AUTOUPDATER": "0",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude"
   },
 
   // Pass host-side secrets through rather than baking them into the image.
@@ -43,15 +44,16 @@
 
   // Persist Claude Code auth/memory and Wrangler login across rebuilds.
   "mounts": [
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
-    "source=fincapanel-wrangler-config,target=/home/node/.config/.wrangler,type=volume",
-    "source=fincapanel-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
+    "source=claude-code-config,target=/home/node/.claude,type=volume"
+    // "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
+    // "source=fincapanel-wrangler-config,target=/home/node/.config/.wrangler,type=volume",
+    // "source=fincapanel-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
   ],
 
   // corepack gives you the exact pnpm version pinned in package.json (packageManager field).
   // wrangler + skills CLI are left as npx/pnpm-dlx tools rather than global installs,
   // so version drift is controlled by your lockfile / CI instead of the container image.
-  "postCreateCommand": "corepack enable && corepack prepare pnpm@latest --activate && npm install -g wrangler && (test -f pnpm-lock.yaml && pnpm install || echo 'no pnpm-lock.yaml yet, skipping install') && npx --yes skills experimental_install --yes || true",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "customizations": {
     "vscode": {
