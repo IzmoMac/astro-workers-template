@@ -5,6 +5,8 @@
   "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
 
   "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+
     // Claude Code CLI, auto-updating. Pin a version instead if you want
     // reproducible builds (see comment in postCreateCommand).
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},

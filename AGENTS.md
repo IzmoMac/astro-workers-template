@@ -104,3 +104,7 @@ interactivity Astro can't express declaratively.
   services.
 - New shared UI components — confirm whether they belong in a
   `packages/ui` workspace package or stay local to one app.
+
+# UI Design Rules for Coding Agents
+
+Look at UI.md for Design Rules.
