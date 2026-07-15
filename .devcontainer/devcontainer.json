@@ -7,16 +7,16 @@
   "features": {
     // Claude Code CLI, auto-updating. Pin a version instead if you want
     // reproducible builds (see comment in postCreateCommand).
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
 
     // gh CLI — handy for PRs / repo setup from inside the container
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-
+    "ghcr.io/devcontainers/features/github-cli:1.1.0": {}
+  
     // For the Cloudflare Access / Terraform pieces
-    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/terraform:1.4.4": {}
 
     // ripgrep, fzf, zsh niceties etc.
-    "ghcr.io/devcontainers/features/common-utils:2": {
+    "ghcr.io/devcontainers/features/common-utils:2.5.9": {
       "installZsh": true,
       "configureZshAsDefaultShell": true
     }
