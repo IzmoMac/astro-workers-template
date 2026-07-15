@@ -25,12 +25,13 @@ Cloudflare account, not once per project.
    ```
    npx wrangler r2 bucket create <project>-tfstate
    ```
-   `init.sh` and `.github/workflows/main.yml` currently assume an **EU
-   jurisdiction** bucket (`region = "eu"`, endpoint
-   `<account-id>.eu.r2.cloudflarestorage.com`) — pass
-   `--jurisdiction eu` when creating it, or update `region`/the endpoint in
-   both files if the bucket isn't jurisdiction-restricted (`region = "auto"`,
-   plain `<account-id>.r2.cloudflarestorage.com`).
+   `init.sh` and `.github/workflows/main.yml` assume an EU jurisdiction
+   bucket (endpoint `<account-id>.eu.r2.cloudflarestorage.com`) — pass
+   `--jurisdiction eu` when creating it, or update the endpoint in both
+   files if the bucket isn't jurisdiction-restricted (plain
+   `<account-id>.r2.cloudflarestorage.com`). `region` is always `"auto"`
+   regardless of jurisdiction — R2's S3-compatible API only accepts
+   `wnam`/`enam`/`weur`/`eeur`/`apac`/`oc`/`auto`, not `"eu"`.
 2. Create an R2 API token scoped to that bucket (Cloudflare dashboard →
    R2 → **Manage R2 API Tokens** → Create API Token → Object Read & Write,
    scoped to `<project>-tfstate`). Save the Access Key ID and Secret Access

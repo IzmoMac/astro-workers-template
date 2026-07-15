@@ -17,7 +17,7 @@ TF_STATE_KEY="${TF_STATE_KEY:-$(node -p "require('../package.json').name")/terra
 cat >backend.hcl <<EOF
 bucket = "${TF_STATE_BUCKET}"
 key    = "${TF_STATE_KEY}"
-region = "eu"
+region = "auto"
 
 endpoints = {
   s3 = "https://${CLOUDFLARE_ACCOUNT_ID}.eu.r2.cloudflarestorage.com"

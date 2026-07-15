@@ -89,7 +89,7 @@ jobs:
           cat > backend.hcl <<EOF
           bucket = "${{ secrets.TF_STATE_BUCKET }}"
           key    = "${project_name}/terraform.tfstate"
-          region = "eu"
+          region = "auto"
 
           endpoints = {
             s3 = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.eu.r2.cloudflarestorage.com"
