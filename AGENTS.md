@@ -12,8 +12,8 @@ repo. Keep it accurate — outdated conventions here are worse than none.
 - **API**: Cloudflare Workers, TypeScript, `wrangler` for local dev/deploy.
 - **Interactive UI**: React islands for anything that needs real client state or
   routing (dashboards, editors) — see "Astro vs React islands" below.
-- **Infra as code**: Terraform for Cloudflare Zero Trust Access apps/policies,
-  under `/infra`.
+- **Infra as code**: Terraform for Cloudflare resources (D1, KV, R2, Durable
+  Objects, Zero Trust Access apps/policies), under `/infra`.
 
 ## Package manager & scripts
 
@@ -67,9 +67,20 @@ interactivity Astro can't express declaratively.
   current default format — don't create a `.toml` file).
 - Secrets are set via `wrangler secret put`, never committed, never placed in
   `.dev.vars` if the repo is public.
-- Zero Trust Access apps/policies for anything auth-gated go through
-  Terraform in `/infra`, not created ad hoc via the dashboard or API — so
-  changes are reviewable and reproducible.
+- Cloudflare resources for this project (D1 databases, KV namespaces, R2
+  buckets, Zero Trust Access apps/policies, etc.) go through Terraform in
+  `/infra`, not created ad hoc via the dashboard, API, or
+  `wrangler d1 create`/`wrangler kv namespace create`/etc. — so changes are
+  reviewable and reproducible.
+- This includes bindings a framework enables automatically, not just ones
+  you declare yourself — e.g. `@astrojs/cloudflare` auto-enables Astro's
+  KV-backed sessions and Cloudflare Images at build time regardless of
+  whether the app uses them. If a `wrangler deploy` log ever shows
+  `Experimental: The following bindings need to be provisioned`, that's
+  the signal to add a Terraform resource for it (see "KV session binding →
+  wrangler.jsonc wiring" in `infra/README.md`) instead of letting wrangler
+  auto-provision it — an auto-provisioned resource is untracked and
+  re-creating it on the next deploy fails.
 - `terraform apply` cannot be run from a Claude Code cloud/remote session
   (provider plugin install needs GitHub API access this environment
   restricts) — it must run from CI or a local/devcontainer session. See
@@ -125,7 +136,9 @@ interactivity Astro can't express declaratively.
 - Don't add `@astrojs/tailwind` (deprecated, v3-only).
 - Don't create `tailwind.config.js` — v4 config is CSS-only.
 - Don't run bare `npm`/`yarn` commands in a pnpm workspace.
-- Don't create Cloudflare Access apps/policies outside Terraform.
+- Don't create Cloudflare resources (Access apps/policies, D1/KV/R2/etc.)
+  outside Terraform — including letting wrangler auto-provision a binding a
+  framework enables by default instead of provisioning it in Terraform.
 - Don't widen TypeScript types to `any` to make an error go away.
 - Don't hydrate a whole page as a React island for one interactive widget.
 - Don't skip TDD for new features/fixes without asking first.

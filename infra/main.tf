@@ -22,6 +22,21 @@
 # example there and README.md "Wiring a Terraform-provisioned ID into
 # wrangler.jsonc".
 #
+# @astrojs/cloudflare auto-enables Astro's KV-backed sessions (the SESSION
+# binding) at build time regardless of whether the app calls Astro.session,
+# and there's no adapter option to disable it. If wrangler.jsonc doesn't
+# declare this binding, `wrangler deploy` "auto-provisions" a KV namespace
+# for it — but only successfully once; every deploy after that fails with
+# "a namespace with this account ID and title already exists [code:
+# 10014]" because the auto-created namespace is untracked. Provision it
+# here instead, the same way as the D1 example above — see README.md "KV
+# session binding → wrangler.jsonc wiring":
+#
+# resource "cloudflare_workers_kv_namespace" "session" {
+#   account_id = var.cloudflare_account_id
+#   title      = "session"
+# }
+#
 # resource "cloudflare_zero_trust_access_application" "example" {
 #   account_id = var.cloudflare_account_id
 #   name       = "example"

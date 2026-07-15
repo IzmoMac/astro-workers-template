@@ -92,6 +92,54 @@ in `main.tf`/`outputs.tf` and `.github/workflows/main.yml`):
      resource by hand via `wrangler d1 create`/`wrangler kv namespace
      create`/etc., it'd create an untracked duplicate outside Terraform.
 
+## KV session binding → wrangler.jsonc wiring
+
+`@astrojs/cloudflare` auto-enables Astro's KV-backed sessions (the
+`SESSION` binding) at build time — regardless of whether the app actually
+calls `Astro.session` — and there's no adapter option to disable it (only
+[`sessionKVBindingName`](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#sessions)
+to rename it). The same applies to Cloudflare Images (the `IMAGES`
+binding), though that one doesn't provision a resource so it doesn't fail
+the same way.
+
+If `wrangler.jsonc` doesn't declare the `SESSION` binding, `wrangler
+deploy` "auto-provisions" a KV namespace for it — but only successfully
+once. Every deploy after that fails with `a namespace with this account ID
+and title already exists [code: 10014]`, because the namespace wrangler
+silently created on the first deploy is never tracked anywhere for it to
+reuse. Watch for `Experimental: The following bindings need to be
+provisioned` in a `wrangler deploy` log — that's the signal a project
+needs this fixed rather than left to auto-provision.
+
+**Fix**: provision it the same way as the D1 database above — see the
+commented `cloudflare_workers_kv_namespace.session` example in `main.tf`
+and the matching `session_kv_namespace_id` output in `outputs.tf`. Once
+uncommented, add the binding to `wrangler.jsonc` yourself:
+
+```jsonc
+"kv_namespaces": [
+  { "binding": "SESSION", "id": "00000000000000000000000000000000" }
+]
+```
+
+Note the placeholder is 32 zeros, not a UUID — KV namespace IDs are
+32-character lowercase hex, unlike D1's UUID `database_id`. CI patches the
+real ID in via the same `jq` step (and the same before-`pnpm build`
+ordering requirement) that patches `d1_database_id` — see "Wiring a
+Terraform-provisioned ID into wrangler.jsonc" above.
+
+**Recovery, if a project already hit the `code: 10014` failure**: an
+untracked namespace from a prior auto-provisioned deploy already exists.
+Find its ID (Cloudflare dashboard → Workers & Pages → KV, or `wrangler kv
+namespace list`), then either:
+
+- Check whether it's empty with `wrangler kv key list --namespace-id
+  <id>`, and if so delete it (dashboard or `wrangler kv namespace delete
+  --namespace-id <id>`) so Terraform can create a tracked replacement on
+  the next `terraform apply`, or
+- Adopt the existing namespace instead of replacing it: `terraform import
+  cloudflare_workers_kv_namespace.session <account_id>/<namespace_id>`.
+
 ## Running locally
 
 Set these on your **host**, before the devcontainer starts — it forwards
