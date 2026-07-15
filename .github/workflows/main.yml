@@ -103,14 +103,23 @@ jobs:
 
       - run: pnpm test
 
-      - run: pnpm build
-
+      # Must run before `pnpm build`, not after: @astrojs/cloudflare's build
+      # step snapshots the resolved wrangler config into
+      # dist/server/wrangler.json, and `wrangler deploy` deploys from that
+      # snapshot, not from the root wrangler.jsonc. Patching after build
+      # bakes in the placeholder database_id and deploy fails with "D1
+      # binding ... references database '00000000-...' which was not
+      # found" even though this step and terraform apply both succeeded.
+      # Don't move this back below `pnpm build` for "readability" — see
+      # infra/README.md.
       - name: Patch D1 database ID into wrangler.jsonc
         if: needs.terraform.outputs.d1_database_id != ''
         run: |
           jq --arg id "${{ needs.terraform.outputs.d1_database_id }}" \
             '.d1_databases[0].database_id = $id' wrangler.jsonc > wrangler.jsonc.tmp
           mv wrangler.jsonc.tmp wrangler.jsonc
+
+      - run: pnpm build
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3

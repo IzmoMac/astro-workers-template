@@ -70,6 +70,10 @@ interactivity Astro can't express declaratively.
 - Zero Trust Access apps/policies for anything auth-gated go through
   Terraform in `/infra`, not created ad hoc via the dashboard or API — so
   changes are reviewable and reproducible.
+- `terraform apply` cannot be run from a Claude Code cloud/remote session
+  (provider plugin install needs GitHub API access this environment
+  restricts) — it must run from CI or a local/devcontainer session. See
+  `infra/README.md`.
 
 ## TypeScript
 

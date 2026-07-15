@@ -71,10 +71,17 @@ in `main.tf`/`outputs.tf` and `.github/workflows/main.yml`):
    hand-edited afterwards.
 3. **CI**: the `terraform` job runs before `deploy-worker` and exposes any
    matching output (e.g. `d1_database_id`) as a job output; `deploy-worker`
-   patches it into `wrangler.jsonc` with `jq` right before `wrangler
-   deploy`, but only if that output is non-empty — projects that haven't
-   added the resource yet just skip the patch step. The committed
-   placeholder is never actually deployed.
+   patches it into `wrangler.jsonc` with `jq`, but only if that output is
+   non-empty — projects that haven't added the resource yet just skip the
+   patch step. The committed placeholder is never actually deployed.
+   - **The patch step must run before `pnpm build`, not after.**
+     `@astrojs/cloudflare`'s build step snapshots the resolved wrangler
+     config into `dist/server/wrangler.json`, and `wrangler deploy` deploys
+     from that snapshot — not from the root `wrangler.jsonc`. Patch-after-build
+     bakes the placeholder ID into the snapshot and deploy fails with `D1
+     binding ... references database '00000000-...' which was not found`,
+     even though `terraform apply` and the patch step both succeeded. Don't
+     move the patch step back below `pnpm build` for "readability."
    - **Local dev/tests**: `wrangler dev`, `astro dev`, and
      `@cloudflare/vitest-pool-workers` all talk to local emulation
      (Miniflare/`--local`) that doesn't care whether the ID matches a real
@@ -120,3 +127,11 @@ terraform -chdir=infra apply
 
 CI does the same thing (see `.github/workflows/main.yml`) using the GitHub
 secrets from the setup above instead of local env vars.
+
+**`terraform apply` cannot be run from a Claude Code cloud/remote session.**
+Installing the `cloudflare/cloudflare` provider plugin needs GitHub API
+access to `cloudflare/terraform-provider-cloudflare` (for release
+checksums), and cloud sessions restrict GitHub API access to repos
+explicitly added to that session — there's no supported way to add an
+unrelated public repo to unblock it. Run `terraform apply` from CI or a
+local/devcontainer session instead.
