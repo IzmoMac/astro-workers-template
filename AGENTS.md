@@ -79,6 +79,30 @@ interactivity Astro can't express declaratively.
   `packages/shared-types` workspace package — don't duplicate interface
   definitions across `apps/web` and `apps/api`.
 
+## Testing
+
+- **Default to TDD (red → green → refactor) for new features and bug fixes**,
+  not just when asked — use the `tdd` skill. Agree the seams under test with
+  the user before writing tests; don't write tests against unconfirmed seams.
+- Two separate Vitest configs, because Worker logic and Astro components need
+  different runtimes:
+  - `*.worker.test.ts` — runs inside the real Workers runtime (workerd via
+    Miniflare, `@cloudflare/vitest-pool-workers`), config in
+    `vitest.worker.config.ts`. Use for API routes, bindings, anything that
+    needs the actual Workers environment. Don't mock bindings — test against
+    the real runtime this pool gives you.
+  - Every other `*.test.ts` — runs under Node via `vitest.astro.config.ts`,
+    which uses the Astro Container API (`astro/container`) to render
+    `.astro` components. This config intentionally skips `astro.config.mjs`
+    (`configFile: false`), since loading the `@astrojs/cloudflare` adapter
+    crashes under plain Vitest — don't remove that flag to "fix" a missing
+    adapter feature in a component test; the adapter isn't meant to be
+    reachable there.
+- Run everything: `pnpm test`. Run one pool: `pnpm test:worker` /
+  `pnpm test:astro`.
+- CI (`.github/workflows/main.yml`) runs `pnpm test` before `pnpm build` on
+  every push to main — a failing test blocks deploy.
+
 ## Skills
 
 - This repo ships with a pinned skill set in `skills-lock.json`. Run
@@ -96,6 +120,9 @@ interactivity Astro can't express declaratively.
 - Don't create Cloudflare Access apps/policies outside Terraform.
 - Don't widen TypeScript types to `any` to make an error go away.
 - Don't hydrate a whole page as a React island for one interactive widget.
+- Don't skip TDD for new features/fixes without asking first.
+- Don't mock Workers bindings in `*.worker.test.ts` — that pool runs against
+  the real Workers runtime specifically so you don't have to.
 
 ## Open questions to confirm before big changes
 

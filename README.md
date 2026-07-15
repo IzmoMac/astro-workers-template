@@ -40,6 +40,25 @@ All commands are run from the root of the project, from a terminal:
 | `pnpm preview`         | Preview your build locally, before deploying     |
 | `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `pnpm astro -- --help` | Get help using the Astro CLI                     |
+| `pnpm test`            | Run all tests (Worker + Astro component)         |
+| `pnpm test:worker`     | Run just `*.worker.test.ts` (real Workers runtime) |
+| `pnpm test:astro`      | Run everything else (Astro component tests)      |
+
+## 🧪 Testing
+
+Two Vitest configs, because Worker logic and Astro components need different
+runtimes:
+
+- `*.worker.test.ts` files run inside the real Workers runtime (workerd via
+  Miniflare, `@cloudflare/vitest-pool-workers`) — for API routes, bindings,
+  anything that needs the actual Workers environment rather than a mock.
+- Every other `*.test.ts` runs under Node, using the
+  [Astro Container API](https://docs.astro.build/en/reference/container-reference/)
+  to render `.astro` components in isolation.
+
+New features and bug fixes go through TDD by default — see the `tdd` skill
+(`.claude/skills/tdd`) — not just when asked. CI runs `pnpm test` before
+every deploy; a failing test blocks it.
 
 ## 🚀 Deploy
 
