@@ -9,3 +9,7 @@
 # output "d1_database_id" {
 #   value = cloudflare_d1_database.example.id
 # }
+#
+# output "session_kv_namespace_id" {
+#   value = cloudflare_workers_kv_namespace.session.id
+# }

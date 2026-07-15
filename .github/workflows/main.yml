@@ -47,6 +47,7 @@ jobs:
       TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     outputs:
       d1_database_id: ${{ steps.tf-outputs.outputs.d1_database_id }}
+      session_kv_namespace_id: ${{ steps.tf-outputs.outputs.session_kv_namespace_id }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,6 +82,7 @@ jobs:
           # output yet — see outputs.tf. deploy-worker only patches
           # wrangler.jsonc when this is non-empty.
           echo "d1_database_id=$(terraform output -raw d1_database_id 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+          echo "session_kv_namespace_id=$(terraform output -raw session_kv_namespace_id 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
 
   deploy-worker:
     name: Deploy Worker
@@ -107,17 +109,27 @@ jobs:
       # step snapshots the resolved wrangler config into
       # dist/server/wrangler.json, and `wrangler deploy` deploys from that
       # snapshot, not from the root wrangler.jsonc. Patching after build
-      # bakes in the placeholder database_id and deploy fails with "D1
-      # binding ... references database '00000000-...' which was not
-      # found" even though this step and terraform apply both succeeded.
-      # Don't move this back below `pnpm build` for "readability" — see
-      # infra/README.md.
-      - name: Patch D1 database ID into wrangler.jsonc
-        if: needs.terraform.outputs.d1_database_id != ''
+      # bakes in the placeholder IDs and deploy fails (D1: "database
+      # '00000000-...' which was not found"; KV: wrangler auto-provisions
+      # an untracked namespace instead, which then fails every subsequent
+      # deploy with "already exists [code: 10014]") even though this step
+      # and terraform apply both succeeded. Don't move this back below
+      # `pnpm build` for "readability" — see infra/README.md. Each patch
+      # only runs if the matching terraform output is non-empty, so
+      # projects that haven't provisioned a given resource yet just skip
+      # it.
+      - name: Patch Terraform-provisioned IDs into wrangler.jsonc
         run: |
-          jq --arg id "${{ needs.terraform.outputs.d1_database_id }}" \
-            '.d1_databases[0].database_id = $id' wrangler.jsonc > wrangler.jsonc.tmp
-          mv wrangler.jsonc.tmp wrangler.jsonc
+          if [ -n "${{ needs.terraform.outputs.d1_database_id }}" ]; then
+            jq --arg id "${{ needs.terraform.outputs.d1_database_id }}" \
+              '.d1_databases[0].database_id = $id' wrangler.jsonc > wrangler.jsonc.tmp
+            mv wrangler.jsonc.tmp wrangler.jsonc
+          fi
+          if [ -n "${{ needs.terraform.outputs.session_kv_namespace_id }}" ]; then
+            jq --arg id "${{ needs.terraform.outputs.session_kv_namespace_id }}" \
+              '.kv_namespaces[0].id = $id' wrangler.jsonc > wrangler.jsonc.tmp
+            mv wrangler.jsonc.tmp wrangler.jsonc
+          fi
 
       - run: pnpm build
 
