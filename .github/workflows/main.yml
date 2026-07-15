@@ -29,9 +29,62 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
+  terraform:
+    name: Terraform apply (/infra)
+    needs: check-project-name
+    if: needs.check-project-name.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      # S3-compatible backend reads these directly — same names it'd use for AWS.
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    outputs:
+      d1_database_id: ${{ steps.tf-outputs.outputs.d1_database_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Generate backend config
+        run: |
+          # Keyed by package.json's name so multiple projects can share one
+          # state bucket without their state files colliding.
+          project_name="$(jq -r .name ../package.json)"
+
+          cat > backend.hcl <<EOF
+          bucket = "${{ secrets.TF_STATE_BUCKET }}"
+          key    = "${project_name}/terraform.tfstate"
+          region = "auto"
+
+          endpoints = {
+            s3 = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.eu.r2.cloudflarestorage.com"
+          }
+          EOF
+
+      - run: terraform init -backend-config=backend.hcl
+
+      - run: terraform plan -out=tfplan
+
+      - run: terraform apply -auto-approve tfplan
+
+      - name: Export outputs for deploy-worker
+        id: tf-outputs
+        run: |
+          # Empty string (not a failure) when a project hasn't defined this
+          # output yet — see outputs.tf. deploy-worker only patches
+          # wrangler.jsonc when this is non-empty.
+          echo "d1_database_id=$(terraform output -raw d1_database_id 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
   deploy-worker:
     name: Deploy Worker
-    needs: check-project-name
+    needs: [check-project-name, terraform]
     if: needs.check-project-name.outputs.configured == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -50,6 +103,22 @@ jobs:
 
       - run: pnpm test
 
+      # Must run before `pnpm build`, not after: @astrojs/cloudflare's build
+      # step snapshots the resolved wrangler config into
+      # dist/server/wrangler.json, and `wrangler deploy` deploys from that
+      # snapshot, not from the root wrangler.jsonc. Patching after build
+      # bakes in the placeholder database_id and deploy fails with "D1
+      # binding ... references database '00000000-...' which was not
+      # found" even though this step and terraform apply both succeeded.
+      # Don't move this back below `pnpm build` for "readability" — see
+      # infra/README.md.
+      - name: Patch D1 database ID into wrangler.jsonc
+        if: needs.terraform.outputs.d1_database_id != ''
+        run: |
+          jq --arg id "${{ needs.terraform.outputs.d1_database_id }}" \
+            '.d1_databases[0].database_id = $id' wrangler.jsonc > wrangler.jsonc.tmp
+          mv wrangler.jsonc.tmp wrangler.jsonc
+
       - run: pnpm build
 
       - name: Deploy to Cloudflare Workers
@@ -58,46 +127,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-
-  terraform:
-    name: Terraform apply (/infra)
-    needs: check-project-name
-    if: needs.check-project-name.outputs.configured == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: infra
-    env:
-      # S3-compatible backend reads these directly — same names it'd use for AWS.
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Generate backend config
-        run: |
-          # Keyed by package.json's name so multiple projects can share one
-          # state bucket without their state files colliding.
-          project_name="$(jq -r .name ../package.json)"
-
-          cat > backend.hcl <<EOF
-          bucket = "${{ secrets.TF_STATE_BUCKET }}"
-          key    = "${project_name}/terraform.tfstate"
-          region = "eu"
-
-          endpoints = {
-            s3 = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.eu.r2.cloudflarestorage.com"
-          }
-          EOF
-
-      - run: terraform init -backend-config=backend.hcl
-
-      - run: terraform plan -out=tfplan
-
-      - run: terraform apply -auto-approve tfplan
