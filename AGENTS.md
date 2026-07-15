@@ -102,6 +102,10 @@ interactivity Astro can't express declaratively.
   `pnpm test:astro`.
 - CI (`.github/workflows/main.yml`) runs `pnpm test` before `pnpm build` on
   every push to main — a failing test blocks deploy.
+- The deploy and Terraform jobs are gated behind a `check-project-name` job
+  that reads `package.json`'s `name` field: while it's still the placeholder
+  `astro-workers-template`, both jobs are skipped (not failed). Run the
+  `init-template` skill to clear the gate before CI will actually deploy.
 
 ## Skills
 

@@ -81,6 +81,14 @@ Once deployed, the site is live at
 `https://<worker-name>.<subdomain>.workers.dev` — `<worker-name>` is the
 `name` field in `wrangler.jsonc` (see the `init-template` skill to rename it).
 
+The workflow starts with a `check-project-name` job that reads `package.json`'s
+`name` field. As long as it's still the template placeholder
+(`astro-workers-template`), the deploy and Terraform jobs are skipped (shown
+as "skipped" in the Actions run, not failed) so a fresh clone can't
+accidentally deploy under the template's name. Run the `init-template` skill
+(or rename it manually in `package.json` and `wrangler.jsonc`) to clear the
+gate.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

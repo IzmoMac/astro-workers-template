@@ -9,8 +9,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-project-name:
+    name: Check project name is set
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: check
+        run: |
+          name="$(jq -r .name package.json)"
+          if [ "$name" = "astro-workers-template" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::package.json still has the placeholder name 'astro-workers-template' — run the init-template skill (or rename it manually in package.json and wrangler.jsonc) before CI will deploy. Skipping deploy jobs."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy-worker:
     name: Deploy Worker
+    needs: check-project-name
+    if: needs.check-project-name.outputs.configured == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,6 +61,8 @@ jobs:
 
   terraform:
     name: Terraform apply (/infra)
+    needs: check-project-name
+    if: needs.check-project-name.outputs.configured == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

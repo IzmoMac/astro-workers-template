@@ -58,9 +58,6 @@
   "mounts": [
     "source=claude-code-config,target=/home/node/.claude,type=volume",
     "source=gh-cli-config,target=/home/node/.config/gh,type=volume"
-    // "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
-    // "source=fincapanel-wrangler-config,target=/home/node/.config/.wrangler,type=volume",
-    // "source=fincapanel-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
   ],
 
   // corepack gives you the exact pnpm version pinned in package.json (packageManager field).

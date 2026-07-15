@@ -72,3 +72,8 @@ generic slug could theoretically collide with unrelated text.
   broke.
 - Show the user a summary of what changed (`git diff --stat` is enough) and
   stop there — do not commit on their behalf.
+
+Note: `.github/workflows/main.yml` has a `check-project-name` job that skips
+the deploy and Terraform jobs while `package.json`'s `name` is still
+`astro-workers-template`. Renaming it here is what clears that gate — no
+separate CI change is needed.
