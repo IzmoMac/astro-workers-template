@@ -54,9 +54,10 @@
     "AWS_SECRET_ACCESS_KEY": "${localEnv:R2_SECRET_ACCESS_KEY}"
   },
 
-  // Persist Claude Code auth/memory and Wrangler login across rebuilds.
+  // Persist Claude Code auth/memory, gh CLI auth, and Wrangler login across rebuilds.
   "mounts": [
-    "source=claude-code-config,target=/home/node/.claude,type=volume"
+    "source=claude-code-config,target=/home/node/.claude,type=volume",
+    "source=gh-cli-config,target=/home/node/.config/gh,type=volume"
     // "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
     // "source=fincapanel-wrangler-config,target=/home/node/.config/.wrangler,type=volume",
     // "source=fincapanel-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
