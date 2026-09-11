@@ -22,6 +22,43 @@ won't collide. Override with `TF_STATE_KEY` if you want something else.
 Reusing a bucket just means step 1 below only needs doing once per
 Cloudflare account, not once per project.
 
+## Storage defaults to EU
+
+This template defaults new projects' data residency to the EU. What that
+means per resource type:
+
+- **D1**: the commented example in `main.tf` sets `jurisdiction =
+  var.storage_jurisdiction` (default `"eu"`, declared in `variables.tf`).
+  Restricting jurisdiction on a `cloudflare_d1_database` guarantees the
+  database's data stays in-region — set it when you uncomment the example
+  rather than dropping it.
+- **R2**: same pattern — the commented `cloudflare_r2_bucket` example in
+  `main.tf` sets both `location = "weur"` (best-effort initial placement)
+  and `jurisdiction = var.storage_jurisdiction`. `jurisdiction` is the real
+  guarantee; `location` only nudges where the bucket is created. The
+  Terraform state bucket itself (see "One-time setup" below) is already
+  created with `--jurisdiction eu` and everything here assumes that.
+- **KV**: `cloudflare_workers_kv_namespace` has **no `jurisdiction` argument
+  in the Terraform provider** — there's no way to set this from `main.tf`.
+  For a namespace that must stay EU-only (like the `SESSION` binding, see
+  "KV session binding → wrangler.jsonc wiring" below), create it manually
+  once with `wrangler kv namespace create <name> --jurisdiction eu`, then
+  run `terraform import cloudflare_workers_kv_namespace.<name>
+  <account_id>/<namespace_id>` so Terraform adopts and manages the
+  already-EU-restricted namespace instead of creating an unrestricted one.
+- **Durable Objects**: there's no Terraform resource for a DO namespace —
+  it's created implicitly by a `wrangler deploy` migration. Jurisdiction is
+  instead a runtime call in application code: `env.MY_DO.jurisdiction("eu")`
+  before deriving an ID (e.g. `.idFromName(...)` /
+  `.newUniqueId(...)`), on every code path that creates or looks up a
+  Durable Object for this project. See [Durable Objects: Jurisdictional
+  restrictions](https://developers.cloudflare.com/durable-objects/reference/data-location/#restrict-durable-objects-to-a-jurisdiction).
+
+`var.storage_jurisdiction` exists so all Terraform-managed storage shares
+one override point — change it in `variables.tf` if a project has an
+explicit reason to store data outside the EU, rather than hardcoding
+`"eu"` per resource.
+
 ## One-time setup (per Cloudflare account)
 
 1. Create the state bucket:

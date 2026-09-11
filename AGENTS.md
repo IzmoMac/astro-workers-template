@@ -14,6 +14,9 @@ repo. Keep it accurate — outdated conventions here are worse than none.
   routing (dashboards, editors) — see "Astro vs React islands" below.
 - **Infra as code**: Terraform for Cloudflare resources (D1, KV, R2, Durable
   Objects, Zero Trust Access apps/policies), under `/infra`.
+- **Data residency**: storage defaults to the EU for this template — see
+  "Storage defaults to EU" in `infra/README.md` before adding a D1
+  database, R2 bucket, KV namespace, or Durable Object.
 
 ## Package manager & scripts
 
@@ -81,6 +84,13 @@ interactivity Astro can't express declaratively.
   wrangler.jsonc wiring" in `infra/README.md`) instead of letting wrangler
   auto-provision it — an auto-provisioned resource is untracked and
   re-creating it on the next deploy fails.
+- New storage resources default to EU jurisdiction — D1 and R2 via
+  `var.storage_jurisdiction` in `main.tf` (Terraform-native), KV via a
+  manual `wrangler kv namespace create --jurisdiction eu` + `terraform
+  import` (no Terraform-native support), Durable Objects via
+  `.jurisdiction("eu")` at the call site in application code (no
+  infra-level setting exists). See "Storage defaults to EU" in
+  `infra/README.md`.
 - `terraform apply` cannot be run from a Claude Code cloud/remote session
   (provider plugin install needs GitHub API access this environment
   restricts) — it must run from CI or a local/devcontainer session. See
